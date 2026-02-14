@@ -52,13 +52,28 @@ class YahooFinanceScraper:
         self.options = webdriver.ChromeOptions()
         if headless:
             self.options.add_argument("--headless")
+        
+        # Performance optimization flags
         self.options.add_argument("--start-maximized")
         self.options.add_argument("--disable-infobars")
         self.options.add_argument("--disable-extensions")
         self.options.add_argument("--no-sandbox")
         self.options.add_argument("--disable-dev-shm-usage")
         self.options.add_argument("--window-size=1920,1080")
+        self.options.add_argument("--disable-gpu")
+        self.options.add_argument("--disable-software-rasterizer")
+        self.options.add_argument("--disable-notifications")
         self.options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        
+        # CRITICAL PERFORMANCE BOOST: Disable images and CSS
+        prefs = {
+            "profile.managed_default_content_settings.images": 2,  # Disable images
+            "profile.default_content_setting_values.notifications": 2,  # Disable notifications
+        }
+        self.options.add_experimental_option("prefs", prefs)
+        
+        # Use 'eager' page load strategy (don't wait for all resources)
+        self.options.page_load_strategy = 'eager'
         
         # Use system chromium-driver for Streamlit Cloud compatibility
         # On Streamlit Cloud, chromium-driver is installed via packages.txt
@@ -73,10 +88,10 @@ class YahooFinanceScraper:
             # Fallback to default (for local development)
             self.driver = webdriver.Chrome(options=self.options)
         
-        self.wait = WebDriverWait(self.driver, 8)
+        self.wait = WebDriverWait(self.driver, 6)
         # Set implicit wait for faster element finding
-        self.driver.implicitly_wait(2)
-        logger.info("Browser initialized successfully.")
+        self.driver.implicitly_wait(1)
+        logger.info("Browser initialized successfully with performance optimizations.")
 
     def _wait_for_page_load(self, timeout: int = 2) -> None:
         """Wait for the document ready state to be complete."""
