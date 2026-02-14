@@ -72,10 +72,12 @@ class YahooFinanceScraper:
             # Fallback to default (for local development)
             self.driver = webdriver.Chrome(options=self.options)
         
-        self.wait = WebDriverWait(self.driver, 15)
+        self.wait = WebDriverWait(self.driver, 10)
+        # Set implicit wait for faster element finding
+        self.driver.implicitly_wait(3)
         logger.info("Browser initialized successfully.")
 
-    def _wait_for_page_load(self, timeout: int = 5) -> None:
+    def _wait_for_page_load(self, timeout: int = 3) -> None:
         """Wait for the document ready state to be complete."""
         try:
             WebDriverWait(self.driver, timeout).until(
@@ -84,24 +86,23 @@ class YahooFinanceScraper:
         except TimeoutException:
             logger.warning(f"Page load timeout for URL: {self.driver.current_url}")
 
-    def _wait_visible(self, locator: tuple, timeout: int = 5) -> Any:
+    def _wait_visible(self, locator: tuple, timeout: int = 3) -> Any:
         """Wait for an element to be visible."""
         return WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located(locator))
 
-    def _wait_clickable(self, locator: tuple, timeout: int = 5) -> Any:
+    def _wait_clickable(self, locator: tuple, timeout: int = 3) -> Any:
         """Wait for an element to be clickable."""
         return WebDriverWait(self.driver, timeout).until(EC.element_to_be_clickable(locator))
 
     def _hover(self, element: Any) -> None:
         """Hover over a web element."""
-        ActionChains(self.driver).move_to_element(element).pause(0.5).perform()
+        ActionChains(self.driver).move_to_element(element).pause(0.2).perform()
 
     def _safe_click(self, locator: tuple, timeout: int = 10) -> None:
         """Safely click an element by scrolling it into view first."""
         try:
             element = self._wait_clickable(locator, timeout)
             self.driver.execute_script("arguments[0].scrollIntoView({block:'center'});", element)
-            time.sleep(0.5) # Short pause for stability
             element.click()
         except (TimeoutException, StaleElementReferenceException) as e:
             logger.error(f"Failed to click element {locator}: {e}")
@@ -169,7 +170,7 @@ class YahooFinanceScraper:
 
         except StaleElementReferenceException:
             logger.warning("Stale element encountered during scraping. Retrying page...")
-            time.sleep(1)
+            time.sleep(0.3)
             return self.scrape_current_page()
         except Exception as e:
             logger.error(f"Error scraping page: {e}")
@@ -187,9 +188,7 @@ class YahooFinanceScraper:
             first_row_check = first_rows[0].text if first_rows else None
 
             # Find and click next button
-            # Note: The specific locator for 'Next' can be tricky on Yahoo Finance.
-            # We assume the locator provided (button[3]) is correct for the 'Next' arrow.
-            btn = self._wait_clickable(self.NEXT_BUTTON, timeout=5)
+            btn = self._wait_clickable(self.NEXT_BUTTON, timeout=3)
             
             # Check if button is disabled (if applicable, though Yahoo mostly hides it)
             if "disabled" in btn.get_attribute("class"):
@@ -200,7 +199,7 @@ class YahooFinanceScraper:
             
             # Wait for table to update
             if first_row_check:
-                WebDriverWait(self.driver, 10).until(
+                WebDriverWait(self.driver, 5).until(
                     lambda d: self._has_table_changed(first_row_check)
                 )
             
