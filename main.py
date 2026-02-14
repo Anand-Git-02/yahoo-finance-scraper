@@ -1,5 +1,6 @@
 import logging
 import time
+import os
 from typing import List, Dict, Optional, Any
 
 from selenium import webdriver
@@ -9,7 +10,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, NoSuchElementException, WebDriverException
-from webdriver_manager.chrome import ChromeDriverManager
 import traceback
 
 # Configure logging
@@ -59,8 +59,19 @@ class YahooFinanceScraper:
         self.options.add_argument("--window-size=1920,1080")
         self.options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         
-        # Initialize driver using WebDriver Manager for automatic driver management
-        self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=self.options)
+        # Use system chromium-driver for Streamlit Cloud compatibility
+        # On Streamlit Cloud, chromium-driver is installed via packages.txt
+        chromium_driver_path = os.getenv('CHROMIUM_DRIVER_PATH', '/usr/bin/chromedriver')
+        
+        try:
+            service = ChromeService(executable_path=chromium_driver_path)
+            self.driver = webdriver.Chrome(service=service, options=self.options)
+        except Exception as e:
+            logger.warning(f"Failed to use system chromium-driver at {chromium_driver_path}: {e}")
+            logger.info("Falling back to default driver...")
+            # Fallback to default (for local development)
+            self.driver = webdriver.Chrome(options=self.options)
+        
         self.wait = WebDriverWait(self.driver, 15)
         logger.info("Browser initialized successfully.")
 
