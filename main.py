@@ -29,6 +29,7 @@ class YahooFinanceScraper:
     """
 
     BASE_URL = "https://finance.yahoo.com/"
+    MOST_ACTIVE_URL = "https://finance.yahoo.com/markets/stocks/most-active/"
     
     # Locators
     NAV_CONTAINER = (By.ID, "navigation-container")
@@ -72,12 +73,12 @@ class YahooFinanceScraper:
             # Fallback to default (for local development)
             self.driver = webdriver.Chrome(options=self.options)
         
-        self.wait = WebDriverWait(self.driver, 10)
+        self.wait = WebDriverWait(self.driver, 8)
         # Set implicit wait for faster element finding
-        self.driver.implicitly_wait(3)
+        self.driver.implicitly_wait(2)
         logger.info("Browser initialized successfully.")
 
-    def _wait_for_page_load(self, timeout: int = 3) -> None:
+    def _wait_for_page_load(self, timeout: int = 2) -> None:
         """Wait for the document ready state to be complete."""
         try:
             WebDriverWait(self.driver, timeout).until(
@@ -86,11 +87,11 @@ class YahooFinanceScraper:
         except TimeoutException:
             logger.warning(f"Page load timeout for URL: {self.driver.current_url}")
 
-    def _wait_visible(self, locator: tuple, timeout: int = 3) -> Any:
+    def _wait_visible(self, locator: tuple, timeout: int = 2) -> Any:
         """Wait for an element to be visible."""
         return WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located(locator))
 
-    def _wait_clickable(self, locator: tuple, timeout: int = 3) -> Any:
+    def _wait_clickable(self, locator: tuple, timeout: int = 2) -> Any:
         """Wait for an element to be clickable."""
         return WebDriverWait(self.driver, timeout).until(EC.element_to_be_clickable(locator))
 
@@ -109,35 +110,15 @@ class YahooFinanceScraper:
             raise
 
     def navigate_to_most_active(self) -> None:
-        """Navigate through the menus to reach the 'Most Active' stocks page."""
+        """Navigate directly to the 'Most Active' stocks page."""
         try:
-            logger.info(f"Navigating to {self.BASE_URL}")
-            self.driver.get(self.BASE_URL)
+            logger.info(f"Navigating directly to {self.MOST_ACTIVE_URL}")
+            self.driver.get(self.MOST_ACTIVE_URL)
             self._wait_for_page_load()
-
-            # Wait for navigation container
-            self._wait_visible(self.NAV_CONTAINER)
-
-            # Markets Menu
-            markets = self._wait_visible(self.MARKETS_MENU)
-            self._hover(markets)
-            logger.info("Hovered over 'Markets' menu.")
-
-            # Stocks Menu
-            stocks = self._wait_visible(self.STOCKS_MENU)
-            self._hover(stocks)
-            logger.info("Hovered over 'Stocks' menu.")
-
-            # Trending Menu
-            trending = self._wait_clickable(self.TRENDING_MENU)
-            trending.click()
-            logger.info("Clicked 'Trending' menu.")
-            self._wait_for_page_load()
-
-            # Click Most Active Tab
-            self._safe_click(self.MOST_ACTIVE_TAB)
-            logger.info("Clicked 'Most Active' tab.")
-            self._wait_for_page_load()
+            
+            # Wait for table to be present
+            self._wait_visible(self.TABLE)
+            logger.info("Successfully loaded Most Active page.")
 
         except Exception as e:
             logger.error(f"Error during navigation: {e}")
@@ -188,7 +169,7 @@ class YahooFinanceScraper:
             first_row_check = first_rows[0].text if first_rows else None
 
             # Find and click next button
-            btn = self._wait_clickable(self.NEXT_BUTTON, timeout=3)
+            btn = self._wait_clickable(self.NEXT_BUTTON, timeout=2)
             
             # Check if button is disabled (if applicable, though Yahoo mostly hides it)
             if "disabled" in btn.get_attribute("class"):
@@ -199,7 +180,7 @@ class YahooFinanceScraper:
             
             # Wait for table to update
             if first_row_check:
-                WebDriverWait(self.driver, 5).until(
+                WebDriverWait(self.driver, 3).until(
                     lambda d: self._has_table_changed(first_row_check)
                 )
             
